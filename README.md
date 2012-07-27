@@ -30,7 +30,7 @@ Change your config main:
         'modules'=>array(
             #...
             'user'=>array(
-                # encrypting method (php hash function)
+                # encrypting method (php hash function) to use blowfish functionality set to blowfish
                 'hash' => 'md5',
 
                 # send activation email
@@ -91,7 +91,7 @@ Change your config console:
         'modules'=>array(
             #...
             'user'=>array(
-                # encrypting method (php hash function)
+                # encrypting method (php hash function)  to use blowfish functionality set to blowfish
                 'hash' => 'md5',
 
                 # send activation email
