@@ -4,7 +4,7 @@ return array(
 	'username' => 'Username',
 	'password' => 'Password',
 	'E-mail' => 'Email',
-	'username or email' => 'Username or email',
+	'username or email' => 'Username/email',
 	'Verification Code' => 'Verification code',
 	'Retype Password' => 'Re-type password',
 	'Retype Password is incorrect.' => 'Passwords do not match',
