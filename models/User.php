@@ -14,6 +14,7 @@ class User extends CActiveRecord
 	 * @var integer $id
 	 * @var string $username
 	 * @var string $password
+	 * @var string $salt
 	 * @var string $email
 	 * @var string $activkey
 	 * @var integer $createtime
@@ -121,7 +122,7 @@ class User extends CActiveRecord
                 'condition'=>'superuser=1',
             ),
             'notsafe'=>array(
-            	'select' => 'id, username, password, email, activkey, create_at, lastvisit_at, superuser, status',
+            	'select' => 'id, username, password, salt, email, activkey, create_at, lastvisit_at, superuser, status',
             ),
         );
     }
@@ -196,5 +197,59 @@ class User extends CActiveRecord
     public function setLastvisit($value) {
         $this->lastvisit_at=date('Y-m-d H:i:s',$value);
     }
-    
+	
+	/**
+	 * simply returns the md5 digested value of PHP's uniqid() 
+	 * That should be sufficient to make most rainbowtables useless. 
+	 * 
+	 * Modify this function to change the way a salt is generated if you disagree.
+	 */
+	public static function getNewSalt() {
+		$hash = Yii::app()->getModule('user')->hash;
+		
+		switch($hash)
+		{
+			case "blowfish":
+				return self::blowfishSalt();
+				break;
+			default:
+				return md5(uniqid(mt_rand(), true));
+				break;
+		}
+	}
+	
+	public static function getNewActivationKey()
+	{
+		$chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+		$key="";
+		for($i=0;$i<28;$i++) 
+			$key.= $chars[mt_rand(0,61)];
+		return $key;
+	}
+	
+	public static function blowfishSalt($cost = 10) 
+	{
+		//validate $cost
+		$cost = (int)$cost;
+		if($cost < 4 || $cost > 31)
+			throw new Exception("Invalid cost. Should be in range of 4-31. See comment on CRYPT_BLOWFISH on http://php.net/manual/en/function.crypt.php");
+		
+		//fix potential high-bit attack security weakness in blowfish implementation (available since PHP version 5.3.7, see: http://www.php.net/security/crypt_blowfish.php)
+		$prefix = (version_compare(PHP_VERSION, '5.3.7') >= 0)? '$2y$' : '$2a$'; 
+		
+		//create a 22 digit random string from the alphabet: ./0-9A-Za-z
+		$chars='./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+		$salt="";
+		for($i=0;$i<22;$i++) 
+			$salt .= $chars[mt_rand(0,63)];
+		
+		return sprintf("%s%02d$" , $prefix, $cost) . $salt;
+	}
+
+	public function afterSave() {
+        if (get_class(Yii::app())=='CWebApplication'&&Profile::$regMode==false) {
+            Yii::app()->user->updateSession();
+        }
+        return parent::afterSave();
+    }
 }

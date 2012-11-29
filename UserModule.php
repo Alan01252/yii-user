@@ -160,24 +160,22 @@ class UserModule extends CWebModule
 	/**
 	 * @return hash string.
 	 */
-	public static function encrypting($string="",$salt=null) {
+	public static function encrypting($string="",$salt="") {
 		$hash = Yii::app()->getModule('user')->hash;
 		
 		switch($hash)
 		{
 			case "md5":
-				return md5($string);
+				return md5($string.$salt);
 			case "sha1":
-				return sha1($string);
+				return sha1($string.$salt);
 			case "blowfish":
 				if(!$salt) {
-					Yii::import('user.extensions.Randomness.Randomness');
-					$salt = Randomness::blowfishSalt();
+					$salt = User::blowfishSalt();
 				}
 				return crypt($string,$salt);
 			default:
-				return hash($hash,$string);
-				
+				return hash($hash,$string.$salt);
 		}
 	}
 	
@@ -228,7 +226,7 @@ class UserModule extends CWebModule
 	}
 	
 	/**
-	 * Send mail method
+	 * Send to user mail
 	 */
 	public static function sendMail($email,$subject,$message) {
     	$adminEmail = Yii::app()->params['adminEmail'];
@@ -237,6 +235,16 @@ class UserModule extends CWebModule
 	    $message = str_replace("\n.", "\n..", $message);
 	    return mail($email,'=?UTF-8?B?'.base64_encode($subject).'?=',$message,$headers);
 	}
+
+    /**
+     * Send to user mail
+     */
+    public function sendMailToUser($user_id,$subject,$message,$from='') {
+        $user = User::model()->findbyPk($user_id);
+        if (!$from) $from = Yii::app()->params['adminEmail'];
+        $headers="From: ".$from."\r\nReply-To: ".Yii::app()->params['adminEmail'];
+        return mail($user->email,'=?UTF-8?B?'.base64_encode($subject).'?=',$message,$headers);
+    }
 	
 	/**
 	 * Return safe user data.
@@ -248,7 +256,7 @@ class UserModule extends CWebModule
             $id = Yii::app()->user->id;
 		if ($id) {
             if (!isset(self::$_users[$id])||$clearCache)
-                self::$_users[$id] = User::model()->with(array('profile'))->findbyPk($id);
+                self::$_users[$id] = User::model()->with(array('profile'))->findByPk($id);
 			return self::$_users[$id];
         } else return false;
 	}

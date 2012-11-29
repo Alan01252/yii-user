@@ -27,14 +27,18 @@ class UserIdentity extends CUserIdentity
 			$user=User::model()->notsafe()->findByAttributes(array('username'=>$this->username));
 		}
 	
-		if($user===null)
+		if($user===null) {
 			if (strpos($this->username,"@")) {
 				$this->errorCode=self::ERROR_EMAIL_INVALID;
 			} else {
 				$this->errorCode=self::ERROR_USERNAME_INVALID;
 			}
-		//Extra password parameter is for blowfish crypt
-		else if(Yii::app()->getModule('user')->encrypting($this->password,$user->password)!==$user->password)
+			return false;
+		}
+
+		$salt = (Yii::app()->getModule('user')->hash == 'blowfish')? $user->password : $user->salt;
+		
+		if(Yii::app()->getModule('user')->encrypting($this->password, $salt)!==$user->password)
 			$this->errorCode=self::ERROR_PASSWORD_INVALID;
 		else if($user->status==0&&Yii::app()->getModule('user')->loginNotActiv==false)
 			$this->errorCode=self::ERROR_STATUS_NOTACTIV;
@@ -44,6 +48,13 @@ class UserIdentity extends CUserIdentity
 			$this->_id=$user->id;
 			$this->username=$user->username;
 			$this->errorCode=self::ERROR_NONE;
+			
+			//when user has no salt, let's be generous and give him some.
+			if(empty($user->salt)) {
+				$user->salt = User::getNewSalt();
+				$user->password = Yii::app()->getModule('user')->encrypting($this->password, $user->salt);
+				$user->save();
+			}
 		}
 		
 		return !$this->errorCode;
